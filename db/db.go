@@ -22,6 +22,7 @@ var Client *mongo.Client
 var ErrDocumentNotFound = errors.New("no found under that filter")
 var ErrCouldNotUnMarshall = errors.New("could not find unmarshall data. try looking at your query?")
 var ErrCursorIterationFailed = errors.New("an error occurred when iterating through a cursor")
+var ErrCollectionNotDefined = errors.New("collection not defined in db.go")
 
 func init() {
 	// Initialize DB
@@ -39,38 +40,43 @@ func init() {
 	Client = clt
 }
 
-func FindOneUser(filter bson.M, db, clct string) (schemas.User, error) {
-	var result schemas.User
-
+func FindOne(filter bson.M, db, clct string) (res interface{}, err error) {
 	// Set DB and collection
 	collection := Client.Database(db).Collection(clct)
 	Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
 
-	// Actual find operation
-	err := collection.FindOne(Ctx, filter).Decode(&result)
+	switch clct {
+	case "users":
+		res, err = FindOneUser(filter, collection)
+	}
 
 	// failed to demarshal
 	if err != nil {
 		log.Fatalf("could not unmarshall document with filter %q", filter)
-		return result, ErrCouldNotUnMarshall
+		return res, ErrCouldNotUnMarshall
 	}
 
-	return result, nil
+	return res, err
 }
 
-func UpdateOneUser() {
+func FindOneUser(filter bson.M, collection *mongo.Collection) (schemas.User, error) {
 
+	// Find Operation
+	var result schemas.User
+	err := collection.FindOne(Ctx, filter).Decode(&result)
+
+	return result, err
 }
 
 func FindUsers(filter bson.D, db, clct string) ([]*schemas.User, error) {
-	var result []*schemas.User
 
 	// Set DB and collection
 	collection := Client.Database(db).Collection(clct)
 	Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
 
+	// Find Operation
+	var result []*schemas.User
 	cursor, err := collection.Find(Ctx, filter)
-	cursor.Close(Ctx)
 
 	if err != nil {
 		return result, ErrDocumentNotFound

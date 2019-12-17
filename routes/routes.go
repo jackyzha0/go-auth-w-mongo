@@ -41,7 +41,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filter := bson.M{"email": creds.Email}
-	res, err := db.FindOneUser(filter, "exampleDB", "users")
+	res, err := db.FindOne(filter, "exampleDB", "users")
 
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
