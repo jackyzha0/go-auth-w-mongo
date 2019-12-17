@@ -6,6 +6,8 @@ import (
 	"log"
 	"time"
 
+	"../schemas"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -35,10 +37,8 @@ func init() {
 	Client = clt
 }
 
-func findOne(filter bson.M, db, clct string) (struct{ Value float64 }, error) {
-	var result struct {
-		Value float64
-	}
+func FindOne(filter bson.M, db, clct string) (schemas.User, error) {
+	var result schemas.User
 
 	// Set DB and collection
 	collection := Client.Database(db).Collection(clct)
@@ -55,6 +55,12 @@ func findOne(filter bson.M, db, clct string) (struct{ Value float64 }, error) {
 	return result, nil
 }
 
-func find() {
-
-}
+// func find(filter bson.D, db, clct string) (bson.D, error) {
+// 	// Set DB and collection
+// 	collection := Client.Database(db).Collection(clct)
+// 	Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
+//
+//   cursor, err := collection.Find(Ctx, bson.{})
+//
+// 	return cursor, err
+// }
