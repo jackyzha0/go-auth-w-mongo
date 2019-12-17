@@ -18,7 +18,6 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/register", routes.Register)
 	r.HandleFunc("/login", routes.Login)
-	r.HandleFunc("/refresh", routes.Refresh)
 	r.HandleFunc("/dashboard", routes.Dashboard)
 	r.HandleFunc("/dbhealthcheck", routes.HealthCheck)
 	http.Handle("/", r)

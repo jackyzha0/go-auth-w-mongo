@@ -6,8 +6,6 @@ import (
 	"log"
 	"time"
 
-	"../schemas"
-
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -23,6 +21,16 @@ var ErrDocumentNotFound = errors.New("no found under that filter")
 var ErrCouldNotUnMarshall = errors.New("could not find unmarshall data. try looking at your query?")
 var ErrCursorIterationFailed = errors.New("an error occurred when iterating through a cursor")
 var ErrCollectionNotDefined = errors.New("collection not defined in db.go")
+
+type Collection struct {
+	DB         string
+	Collection string
+}
+
+type DocumentInterface interface {
+	FindOne(filter bson.M, db, clct string, doctype *interface{}) (err error)
+	FindMany(filter bson.D, db, clct string, doctype []*interface{}) (err error)
+}
 
 func init() {
 	// Initialize DB
@@ -40,65 +48,53 @@ func init() {
 	Client = clt
 }
 
-func FindOne(filter bson.M, db, clct string) (res interface{}, err error) {
+func (db Collection) FindOne(filter bson.M, doctype interface{}) (err error) {
 	// Set DB and collection
-	collection := Client.Database(db).Collection(clct)
+	collection := Client.Database(db.DB).Collection(db.Collection)
 	Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
 
-	switch clct {
-	case "users":
-		res, err = FindOneUser(filter, collection)
-	}
+	// Find Operation
+	err = collection.FindOne(Ctx, filter).Decode(doctype)
 
-	// failed to demarshal
+	// failed to unmarshall
 	if err != nil {
 		log.Fatalf("could not unmarshall document with filter %q", filter)
-		return res, ErrCouldNotUnMarshall
+		return ErrCouldNotUnMarshall
 	}
 
-	return res, err
+	return nil
 }
 
-func FindOneUser(filter bson.M, collection *mongo.Collection) (schemas.User, error) {
-
-	// Find Operation
-	var result schemas.User
-	err := collection.FindOne(Ctx, filter).Decode(&result)
-
-	return result, err
-}
-
-func FindUsers(filter bson.D, db, clct string) ([]*schemas.User, error) {
+func (db Collection) FindUsers(filter bson.D, doctype []*interface{}) (err error) {
 
 	// Set DB and collection
-	collection := Client.Database(db).Collection(clct)
+	collection := Client.Database(db.DB).Collection(db.Collection)
 	Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
 
 	// Find Operation
-	var result []*schemas.User
 	cursor, err := collection.Find(Ctx, filter)
 
 	if err != nil {
-		return result, ErrDocumentNotFound
+		return ErrDocumentNotFound
 	}
 
 	for cursor.Next(Ctx) {
-		var user schemas.User
+		var user interface{}
 		err := cursor.Decode(&user)
 		if err != nil {
 			log.Fatalf("could not unmarshall document with filter %q", filter)
-			return result, ErrCouldNotUnMarshall
+			return ErrCouldNotUnMarshall
 		}
-		result = append(result, &user)
+		doctype = append(doctype, &user)
 	}
 
+	// unmarshall fail
 	if cursor.Err() != nil {
 		log.Fatalf("cursor iteration failed with filter %q", filter)
-		return result, ErrCursorIterationFailed
+		return ErrCursorIterationFailed
 	}
 
 	// Close cursor after we're done with it
 	cursor.Close(Ctx)
-
-	return result, nil
+	return nil
 }
