@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"../db"
-	"../schemas" //come back to this
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
@@ -37,19 +37,11 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// If the structure of the body is wrong, return an HTTP error
 		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Bad Request, structure incorrect.\n")
 		return
 	}
 
-	// collection := db.Client.Database("signin").Collection("students")
-	// db.Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
-	// cur, err := collection.find(db.Ctx, bson.D{"email":""})
-	//
-	// if err != nil {
-	//
-	// }
-	//
-	// w.WriteHeader(http.StatusOK)
-	// fmt.Fprintf(w, "Hello!\n")
+	filter := bson.M{"email": user.Email}
 }
 
 func Refresh(w http.ResponseWriter, r *http.Request) {

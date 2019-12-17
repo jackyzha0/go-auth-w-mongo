@@ -8,4 +8,5 @@ This repository was created as an exercise in Go development. The following rout
 /login "creates a token if user is registered"
 /refresh "refresh current user's token"
 /dashboard "simple dashboard to display user's name"
+/dbhealthcheck "checks if connection to MongoDB is healthy"
 ```

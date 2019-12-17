@@ -2,9 +2,11 @@ package db
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -14,6 +16,8 @@ const DB_uri = "mongodb://localhost:27017"
 // Create DB Connection
 var Ctx context.Context
 var Client *mongo.Client
+
+var ErrDocumentNotFound = errors.New("no documents found matching that filter")
 
 func init() {
 	// Initialize DB
@@ -29,4 +33,28 @@ func init() {
 	// Change Package level vars
 	Ctx = conn
 	Client = clt
+}
+
+func findOne(filter bson.M, db, clct string) (struct{ Value float64 }, error) {
+	var result struct {
+		Value float64
+	}
+
+	// Set DB and collection
+	collection := Client.Database(db).Collection(clct)
+	Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
+
+	// Actual find operation
+	errF := collection.FindOne(Ctx, filter).Decode(&result)
+
+	// Check if demarshalled into struct properly
+	if errF != nil {
+		return result, ErrDocumentNotFound
+	}
+
+	return result, nil
+}
+
+func find() {
+
 }
