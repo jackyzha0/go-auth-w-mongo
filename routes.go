@@ -1,9 +1,13 @@
 package main
 
-import "net/http"
+import (
+	"net/http"
+
+	mongo "./mongoclient"
+)
 
 func Register(w http.ResponseWriter, r *http.Request) {
-
+	collection := mongo.client.Database("testing").Collection("numbers")
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {

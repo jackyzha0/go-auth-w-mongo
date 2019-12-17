@@ -9,6 +9,7 @@ import (
 )
 
 func main() {
+	// Define Mux Router
 	r := mux.NewRouter()
 	r.HandleFunc("/register", Register)
 	r.HandleFunc("/login", Login)
@@ -16,8 +17,8 @@ func main() {
 	r.HandleFunc("/dashboard", Dashboard)
 	http.Handle("/", r)
 
+	// Start HTTP server
 	server := newServer(":"+strconv.Itoa(8080), r)
-
 	panic(server.ListenAndServe())
 }
 
