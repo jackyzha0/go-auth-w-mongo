@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
 	"../db"
 	"../schemas"
+	uuid "github.com/satori/go.uuid"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -27,10 +29,6 @@ func HealthCheck(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func Register(w http.ResponseWriter, r *http.Request) {
-
-}
-
 func Login(w http.ResponseWriter, r *http.Request) {
 	var creds schemas.Credentials
 	decodeErr := json.NewDecoder(r.Body).Decode(&creds)
@@ -43,19 +41,37 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filter := bson.M{"email": creds.Email}
-	res, err := db.FindOne(filter, "exampleDB", "users")
+	res, err := db.FindOneUser(filter, "exampleDB", "users")
 
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Document not found.\n")
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Document found: %+v\n", res)
 
+	// New Session Token
+	sessionToken, _ := uuid.NewV4()
+
+	// Update User token
+
+	// catch write fail
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("Error occured when attempting to write session token to database")
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	// Write cookie to client
+	http.SetCookie(w, &http.Cookie{
+		Name:    "session_token",
+		Value:   sessionToken.String(),
+		Expires: time.Now().Add(120 * time.Second),
+	})
+
+	log.Printf("User %q logged in with token %q", res.Name, sessionToken.String())
 }
 
-func Refresh(w http.ResponseWriter, r *http.Request) {
+func Register(w http.ResponseWriter, r *http.Request) {
 
 }
 
