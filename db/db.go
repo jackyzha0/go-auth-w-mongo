@@ -22,9 +22,13 @@ var ErrCouldNotUnMarshall = errors.New("could not find unmarshall data. query ma
 var ErrCursorIterationFailed = errors.New("an error occurred when iterating through a cursor")
 var ErrCollectionNotDefined = errors.New("collection not defined in db.go")
 
-type Collection struct {
-	DB         string
-	Collection string
+type CnctConnection struct {
+	Collection *mongo.Collection
+}
+
+func New(db, cnct string) (c CnctConnection) {
+  c.Collection = Client.Database(db).Collection(cnct)
+  return c
 }
 
 func init() {
@@ -43,13 +47,12 @@ func init() {
 	Client = clt
 }
 
-func (db Collection) FindOne(filter bson.D, res interface{}) (err error) {
+func (db CnctConnection) FindOne(filter bson.D, res interface{}) (err error) {
 	// Set DB and collection
-	collection := Client.Database(db.DB).Collection(db.Collection)
 	Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
 
 	// Find Operation
-	err = collection.FindOne(Ctx, filter).Decode(res)
+	err = db.Collection.FindOne(Ctx, filter).Decode(res)
 
 	// failed to unmarshall
 	if err != nil {
@@ -59,13 +62,12 @@ func (db Collection) FindOne(filter bson.D, res interface{}) (err error) {
 	return nil
 }
 
-func (db Collection) FindMany(filter bson.D, res *[]interface{}) (err error) {
+func (db CnctConnection) FindMany(filter bson.D, res *[]interface{}) (err error) {
 	// Set DB and collection
-	collection := Client.Database(db.DB).Collection(db.Collection)
 	Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
 
 	// Find Operation
-	cursor, err := collection.Find(Ctx, filter)
+	cursor, err := db.Collection.Find(Ctx, filter)
 
 	if err != nil {
 		return ErrDocumentNotFound

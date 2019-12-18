@@ -16,7 +16,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
-var Users = db.Collection{DB: "exampleDB", Collection: "users"}
+var Users = db.New("exampleDB", "users")
 
 func HealthCheck(w http.ResponseWriter, r *http.Request) {
 	db.Ctx, _ = context.WithTimeout(context.Background(), 2*time.Second)
