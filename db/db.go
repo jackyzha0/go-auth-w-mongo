@@ -11,7 +11,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-const DB_uri = "mongodb://localhost:27017"
+//
+const DBuri = "mongodb://localhost:27017"
 
 // Create DB Connection
 var Ctx context.Context
@@ -33,9 +34,9 @@ func New(db, cnct string) (c CnctConnection) {
 
 func init() {
 	// Initialize DB
-	log.Printf("Attempting to connect to %q", DB_uri)
+	log.Printf("Attempting to connect to %q", DBuri)
 	conn, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	clt, err := mongo.Connect(Ctx, options.Client().ApplyURI(DB_uri))
+	clt, err := mongo.Connect(Ctx, options.Client().ApplyURI(DBuri))
 
 	if err != nil {
 		log.Panic(err)
