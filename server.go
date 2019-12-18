@@ -26,17 +26,6 @@ func main() {
 	r.HandleFunc("/dashboard", routes.Dashboard)
 	r.HandleFunc("/dbhealthcheck", routes.HealthCheck)
 
-	if DEBUG {
-		r.HandleFunc("/t/findone", FindOneTest)
-		r.HandleFunc("/t/findmany", FindManyTest)
-		r.HandleFunc("/t/updateone", UpdateOneTest)
-		r.HandleFunc("/t/updatemany", UpdateManyTest)
-		r.HandleFunc("/t/deleteone", DeleteOneTest)
-		r.HandleFunc("/t/deletemany", DeleteManyTest)
-		r.HandleFunc("/t/insertone", InsertOneTest)
-		r.HandleFunc("/t/insertmany", InsertManyTest)
-	}
-
 	http.Handle("/", r)
 
 	// Start HTTP server

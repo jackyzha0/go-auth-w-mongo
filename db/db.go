@@ -17,6 +17,7 @@ const DBuri = "mongodb://localhost:27017"
 
 // Create Context
 var Ctx context.Context
+
 // Create MongoDB client
 var Client *mongo.Client
 
@@ -33,8 +34,8 @@ type CnctConnection struct {
 
 // Function to create new connection to Mongo Collection
 func New(db, cnct string) (c CnctConnection) {
-  c.Collection = Client.Database(db).Collection(cnct)
-  return c
+	c.Collection = Client.Database(db).Collection(cnct)
+	return c
 }
 
 // Initialize connection to DB, set package wide Ctx and Client
@@ -100,27 +101,27 @@ func (db CnctConnection) FindMany(filter bson.D, res *[]interface{}) (err error)
 
 // Simplification of collection.UpdateOne() except it doesn't return the document
 func (db CnctConnection) UpdateOne(filter, update bson.D) (err error) {
-  // Set context
-  Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
+	// Set context
+	Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
 
-  // Updated result is discarded, you can reimplement if needed
-  _, err = db.Collection.UpdateOne(Ctx, filter, update)
+	// Updated result is discarded, you can reimplement if needed
+	_, err = db.Collection.UpdateOne(Ctx, filter, update)
 
-  if err != nil {
-      return ErrUpdateFailed
-  }
-  return nil
+	if err != nil {
+		return ErrUpdateFailed
+	}
+	return nil
 }
 
 // Simplification of collection.Update() except it doesn't return a cursor
 func (db CnctConnection) UpdateMany(filter, update bson.D) (err error) {
-  // Set context
-  Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
+	// Set context
+	Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
 
-  _, err = db.Collection.UpdateMany(Ctx, filter, update)
+	_, err = db.Collection.UpdateMany(Ctx, filter, update)
 
-  if err != nil {
-      return ErrUpdateFailed
-  }
-  return nil
+	if err != nil {
+		return ErrUpdateFailed
+	}
+	return nil
 }
