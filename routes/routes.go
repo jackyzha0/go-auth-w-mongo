@@ -16,6 +16,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
+var Users = db.Collection{DB: "exampleDB", Collection: "users"}
+
 func HealthCheck(w http.ResponseWriter, r *http.Request) {
 	db.Ctx, _ = context.WithTimeout(context.Background(), 2*time.Second)
 	err := db.Client.Ping(db.Ctx, readpref.Primary())
@@ -29,6 +31,19 @@ func HealthCheck(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func Test(w http.ResponseWriter, r *http.Request) {
+	filter := bson.D{{}}
+	var res []interface{}
+	err := Users.FindMany(filter, &res)
+
+	if err != nil {
+		log.Panic(err)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Results found %+v.\n", res)
+}
+
 func Login(w http.ResponseWriter, r *http.Request) {
 	var creds schemas.Credentials
 	decodeErr := json.NewDecoder(r.Body).Decode(&creds)
@@ -40,10 +55,9 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filter := bson.M{"email": creds.Email}
+	filter := bson.D{{"email", creds.Email}}
 	var res schemas.User
-	database := db.Collection{DB: "exampleDB", Collection: "users"}
-	err := database.FindOne(filter, &res)
+	err := Users.FindOne(filter, &res)
 
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -56,19 +70,14 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	// Update User token
 
 	// catch write fail
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Printf("Error occured when attempting to write session token to database")
-		return
-	}
 
-	w.WriteHeader(http.StatusOK)
 	// Write cookie to client
 	http.SetCookie(w, &http.Cookie{
 		Name:    "session_token",
 		Value:   sessionToken.String(),
-		Expires: time.Now().Add(120 * time.Second),
+		Expires: time.Now().Add(120 * time.Minute),
 	})
+	w.WriteHeader(http.StatusOK)
 
 	log.Printf("User %q logged in with token %q", res.Name, sessionToken.String())
 }

@@ -19,6 +19,7 @@ func main() {
 	r.HandleFunc("/register", routes.Register)
 	r.HandleFunc("/login", routes.Login)
 	r.HandleFunc("/dashboard", routes.Dashboard)
+	r.HandleFunc("/qtest", routes.Test)
 	r.HandleFunc("/dbhealthcheck", routes.HealthCheck)
 	http.Handle("/", r)
 

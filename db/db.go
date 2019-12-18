@@ -18,18 +18,13 @@ var Ctx context.Context
 var Client *mongo.Client
 
 var ErrDocumentNotFound = errors.New("no found under that filter")
-var ErrCouldNotUnMarshall = errors.New("could not find unmarshall data. try looking at your query?")
+var ErrCouldNotUnMarshall = errors.New("could not find unmarshall data. query may be malformed")
 var ErrCursorIterationFailed = errors.New("an error occurred when iterating through a cursor")
 var ErrCollectionNotDefined = errors.New("collection not defined in db.go")
 
 type Collection struct {
 	DB         string
 	Collection string
-}
-
-type DocumentInterface interface {
-	FindOne(filter bson.M, db, clct string, doctype *interface{}) (err error)
-	FindMany(filter bson.D, db, clct string, doctype []*interface{}) (err error)
 }
 
 func init() {
@@ -48,25 +43,23 @@ func init() {
 	Client = clt
 }
 
-func (db Collection) FindOne(filter bson.M, doctype interface{}) (err error) {
+func (db Collection) FindOne(filter bson.D, res interface{}) (err error) {
 	// Set DB and collection
 	collection := Client.Database(db.DB).Collection(db.Collection)
 	Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
 
 	// Find Operation
-	err = collection.FindOne(Ctx, filter).Decode(doctype)
+	err = collection.FindOne(Ctx, filter).Decode(res)
 
 	// failed to unmarshall
 	if err != nil {
-		log.Fatalf("could not unmarshall document with filter %q", filter)
 		return ErrCouldNotUnMarshall
 	}
 
 	return nil
 }
 
-func (db Collection) FindUsers(filter bson.D, doctype []*interface{}) (err error) {
-
+func (db Collection) FindMany(filter bson.D, res *[]interface{}) (err error) {
 	// Set DB and collection
 	collection := Client.Database(db.DB).Collection(db.Collection)
 	Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
@@ -79,13 +72,12 @@ func (db Collection) FindUsers(filter bson.D, doctype []*interface{}) (err error
 	}
 
 	for cursor.Next(Ctx) {
-		var user interface{}
-		err := cursor.Decode(&user)
+		var doc interface{}
+		err := cursor.Decode(&doc)
 		if err != nil {
-			log.Fatalf("could not unmarshall document with filter %q", filter)
 			return ErrCouldNotUnMarshall
 		}
-		doctype = append(doctype, &user)
+		*res = append(*res, doc)
 	}
 
 	// unmarshall fail
