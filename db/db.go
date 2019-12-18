@@ -21,10 +21,10 @@ var Ctx context.Context
 var Client *mongo.Client
 
 // Error Definitions
-var ErrDocumentNotFound = errors.New("no found under that filter")
-var ErrCouldNotUnMarshall = errors.New("could not find unmarshall data. query may be malformed")
-var ErrCursorIterationFailed = errors.New("an error occurred when iterating through a cursor")
-var ErrCollectionNotDefined = errors.New("collection not defined in db.go")
+var ErrDocumentNotFound = errors.New("No documents found under that filter.")
+var ErrFindFailed = errors.New("Could not find unmarshall data. Query may be malformed")
+var ErrUpdateFailed = errors.New("Could not update document.")
+var ErrCursorIterationFailed = errors.New("An error occurred when iterating through a cursor")
 
 // Wrapper for Mongo Collection
 type CnctConnection struct {
@@ -55,15 +55,14 @@ func init() {
 
 // Simplification of collection.FindOne()
 func (db CnctConnection) FindOne(filter bson.D, res interface{}) (err error) {
-	// Set DB and collection
+	// Set context
 	Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
 
-	// Find Operation
 	err = db.Collection.FindOne(Ctx, filter).Decode(res)
 
 	// failed to unmarshall
 	if err != nil {
-		return ErrCouldNotUnMarshall
+		return ErrFindFailed
 	}
 
 	return nil
@@ -71,10 +70,9 @@ func (db CnctConnection) FindOne(filter bson.D, res interface{}) (err error) {
 
 // Simplification of collection.Find()
 func (db CnctConnection) FindMany(filter bson.D, res *[]interface{}) (err error) {
-	// Set DB and collection
+	// Set context
 	Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
 
-	// Find Operation
 	cursor, err := db.Collection.Find(Ctx, filter)
 
 	if err != nil {
@@ -85,18 +83,44 @@ func (db CnctConnection) FindMany(filter bson.D, res *[]interface{}) (err error)
 		var doc interface{}
 		err := cursor.Decode(&doc)
 		if err != nil {
-			return ErrCouldNotUnMarshall
+			return ErrFindFailed
 		}
 		*res = append(*res, doc)
 	}
 
 	// unmarshall fail
 	if cursor.Err() != nil {
-		log.Fatalf("cursor iteration failed with filter %q", filter)
 		return ErrCursorIterationFailed
 	}
 
 	// Close cursor after we're done with it
 	cursor.Close(Ctx)
 	return nil
+}
+
+// Simplification of collection.UpdateOne() except it doesn't return the document
+func (db CnctConnection) UpdateOne(filter, update bson.D) (err error) {
+  // Set context
+  Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
+
+  // Updated result is discarded, you can reimplement if needed
+  _, err = db.Collection.UpdateOne(Ctx, filter, update)
+
+  if err != nil {
+      return ErrUpdateFailed
+  }
+  return nil
+}
+
+// Simplification of collection.Update() except it doesn't return a cursor
+func (db CnctConnection) UpdateMany(filter, update bson.D) (err error) {
+  // Set context
+  Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
+
+  _, err = db.Collection.UpdateMany(Ctx, filter, update)
+
+  if err != nil {
+      return ErrUpdateFailed
+  }
+  return nil
 }
