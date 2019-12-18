@@ -5,14 +5,15 @@ import (
 	"testing"
 
 	"go.mongodb.org/mongo-driver/bson"
+	m "go.mongodb.org/mongo-driver/mongo"
 
-	. "./db"
+	"./db"
 )
 
 // Create new connection to Users Collection. To ensure test state, ensure that a Database called `exampleDB` and a Collection called `test` exists and contains two documents
 // {name: "bob", surname: "joe"}
 // {name: "sally", surname: "joe"}
-var TestCollection = New("exampleDB", "test")
+var TestCollection = db.New("exampleDB", "test")
 
 // Check to see if JSON content is the same
 func assertJSON(t *testing.T, got interface{}, want string) {
@@ -60,7 +61,7 @@ func TestFind(t *testing.T) {
 		filter := bson.D{{"name", "john"}}
 		var res interface{}
 		err := TestCollection.FindOne(filter, &res)
-		assertError(t, err, ErrFindFailed)
+		assertError(t, err, m.ErrNoDocuments)
 	})
 
 	t.Run("Find with invalid field", func(t *testing.T) {
@@ -68,7 +69,7 @@ func TestFind(t *testing.T) {
 		filter := bson.D{{"birthday", "04/16/01"}}
 		var res interface{}
 		err := TestCollection.FindOne(filter, &res)
-		assertError(t, err, ErrFindFailed)
+		assertError(t, err, m.ErrNoDocuments)
 	})
 
 	t.Run("Find multiple present", func(t *testing.T) {
@@ -96,26 +97,27 @@ func TestFind(t *testing.T) {
 	})
 }
 
-// // Driver to test UpdateOne
-// func TestUpdateOne(w http.ResponseWriter, r *http.Request) {
-// }
-//
-// // Driver to test UpdateMany
-// func TestUpdateMany(w http.ResponseWriter, r *http.Request) {
-// }
-//
-// // Driver to test DeleteOne
-// func TestDeleteOne(w http.ResponseWriter, r *http.Request) {
-// }
-//
-// // Driver to test DeleteMany
-// func TestDeleteMany(w http.ResponseWriter, r *http.Request) {
-// }
-//
 // // Driver to test InsertOne
-// func TestInsertOne(w http.ResponseWriter, r *http.Request) {
+// func TestInsertOne(t *testing.T) {
+//
 // }
 //
 // // Driver to test InsertMany
-// func TestInsertMany(w http.ResponseWriter, r *http.Request) {
+// func TestInsertMany(t *testing.T) {
+// }
+//
+// // Driver to test DeleteOne
+// func TestDeleteOne(t *testing.T) {
+// }
+//
+// // Driver to test DeleteMany
+// func TestDeleteMany(t *testing.T) {
+// }
+//
+// // Driver to test UpdateOne
+// func TestUpdateOne(t *testing.T) {
+// }
+//
+// // Driver to test UpdateMany
+// func TestUpdateMany(t *testing.T) {
 // }

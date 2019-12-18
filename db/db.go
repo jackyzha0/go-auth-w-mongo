@@ -3,7 +3,6 @@ package db
 
 import (
 	"context"
-	"errors"
 	"log"
 	"time"
 
@@ -21,11 +20,7 @@ var Ctx context.Context
 // Create MongoDB client
 var Client *mongo.Client
 
-// Error Definitions
-var ErrDocumentNotFound = errors.New("No documents found under that filter.")
-var ErrFindFailed = errors.New("Could not find unmarshall data. Query may be malformed")
-var ErrUpdateFailed = errors.New("Could not update document.")
-var ErrCursorIterationFailed = errors.New("An error occurred when iterating through a cursor")
+const OperationTimeOut = 5
 
 // Wrapper for Mongo Collection
 type CnctConnection struct {
@@ -41,7 +36,7 @@ func New(db, cnct string) (c CnctConnection) {
 // Initialize connection to DB, set package wide Ctx and Client
 func init() {
 	log.Printf("Attempting to connect to %q", DBuri)
-	conn, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	conn, _ := context.WithTimeout(context.Background(), OperationTimeOut*time.Second)
 	clt, err := mongo.Connect(Ctx, options.Client().ApplyURI(DBuri))
 
 	if err != nil {
@@ -57,13 +52,13 @@ func init() {
 // Simplification of collection.FindOne()
 func (db CnctConnection) FindOne(filter bson.D, res interface{}) (err error) {
 	// Set context
-	Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
+	Ctx, _ = context.WithTimeout(context.Background(), OperationTimeOut*time.Second)
 
 	err = db.Collection.FindOne(Ctx, filter).Decode(res)
 
 	// failed to unmarshall
 	if err != nil {
-		return ErrFindFailed
+		return err
 	}
 
 	return nil
@@ -72,26 +67,26 @@ func (db CnctConnection) FindOne(filter bson.D, res interface{}) (err error) {
 // Simplification of collection.Find()
 func (db CnctConnection) FindMany(filter bson.D, res *[]interface{}) (err error) {
 	// Set context
-	Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
+	Ctx, _ = context.WithTimeout(context.Background(), OperationTimeOut*time.Second)
 
 	cursor, err := db.Collection.Find(Ctx, filter)
 
 	if err != nil {
-		return ErrDocumentNotFound
+		return err
 	}
 
 	for cursor.Next(Ctx) {
 		var doc interface{}
 		err := cursor.Decode(&doc)
 		if err != nil {
-			return ErrFindFailed
+			return err
 		}
 		*res = append(*res, doc)
 	}
 
 	// unmarshall fail
 	if cursor.Err() != nil {
-		return ErrCursorIterationFailed
+		return err
 	}
 
 	// Close cursor after we're done with it
@@ -102,13 +97,13 @@ func (db CnctConnection) FindMany(filter bson.D, res *[]interface{}) (err error)
 // Simplification of collection.UpdateOne() except it doesn't return the document
 func (db CnctConnection) UpdateOne(filter, update bson.D) (err error) {
 	// Set context
-	Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
+	Ctx, _ = context.WithTimeout(context.Background(), OperationTimeOut*time.Second)
 
 	// Updated result is discarded, you can reimplement if needed
 	_, err = db.Collection.UpdateOne(Ctx, filter, update)
 
 	if err != nil {
-		return ErrUpdateFailed
+		return err
 	}
 	return nil
 }
@@ -116,12 +111,58 @@ func (db CnctConnection) UpdateOne(filter, update bson.D) (err error) {
 // Simplification of collection.Update() except it doesn't return a cursor
 func (db CnctConnection) UpdateMany(filter, update bson.D) (err error) {
 	// Set context
-	Ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
+	Ctx, _ = context.WithTimeout(context.Background(), OperationTimeOut*time.Second)
 
 	_, err = db.Collection.UpdateMany(Ctx, filter, update)
 
 	if err != nil {
-		return ErrUpdateFailed
+		return err
+	}
+	return nil
+}
+
+// Simplification of InsertOne, doesn't return document and accepts arbitrary structs
+func (db CnctConnection) InsertOne(str interface{}) (err error) {
+	// Set context
+	Ctx, _ = context.WithTimeout(context.Background(), OperationTimeOut*time.Second)
+
+	_, err = db.Collection.InsertOne(Ctx, str)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Simplification of InsertMany, takes slice of structs
+func (db CnctConnection) InsertMany(str []interface{}) (err error) {
+	// Set context
+	Ctx, _ = context.WithTimeout(context.Background(), OperationTimeOut*time.Second)
+
+	_, err = db.Collection.InsertMany(Ctx, str)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Wrapper for collection.DeleteOne()
+func (db CnctConnection) DeleteOne(filter bson.D) (err error) {
+	// Set context
+	Ctx, _ = context.WithTimeout(context.Background(), OperationTimeOut*time.Second)
+	_, err = db.Collection.DeleteOne(Ctx, filter)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Wrapper for collection.DeleteMany()
+func (db CnctConnection) DeleteMany(filter bson.D) (err error) {
+	// Set context
+	Ctx, _ = context.WithTimeout(context.Background(), OperationTimeOut*time.Second)
+	_, err = db.Collection.DeleteMany(Ctx, filter)
+	if err != nil {
+		return err
 	}
 	return nil
 }
