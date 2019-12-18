@@ -34,20 +34,6 @@ func HealthCheck(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// !!! Placeholder Function to test FindMany()
-func Test(w http.ResponseWriter, r *http.Request) {
-	filter := bson.D{{}}
-	var res []interface{}
-	err := Users.FindMany(filter, &res)
-
-	if err != nil {
-		log.Panic(err)
-	}
-
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Results found %+v.\n", res)
-}
-
 // Endpoint to users to login through, injects a sessionToken that is valid for 2 hours
 func Login(w http.ResponseWriter, r *http.Request) {
 	var creds schemas.Credentials

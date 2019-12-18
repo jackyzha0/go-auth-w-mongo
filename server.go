@@ -14,6 +14,9 @@ import (
 // Port to run application
 const port = 8080
 
+// Whether to enable debug routes
+const DEBUG = true
+
 // Define router and start server
 func main() {
 	// Define Mux Router
@@ -21,8 +24,19 @@ func main() {
 	r.HandleFunc("/register", routes.Register)
 	r.HandleFunc("/login", routes.Login)
 	r.HandleFunc("/dashboard", routes.Dashboard)
-	r.HandleFunc("/qtest", routes.Test)
 	r.HandleFunc("/dbhealthcheck", routes.HealthCheck)
+
+	if DEBUG {
+		r.HandleFunc("/t/findone", FindOneTest)
+		r.HandleFunc("/t/findmany", FindManyTest)
+		r.HandleFunc("/t/updateone", UpdateOneTest)
+		r.HandleFunc("/t/updatemany", UpdateManyTest)
+		r.HandleFunc("/t/deleteone", DeleteOneTest)
+		r.HandleFunc("/t/deletemany", DeleteManyTest)
+		r.HandleFunc("/t/insertone", InsertOneTest)
+		r.HandleFunc("/t/insertmany", InsertManyTest)
+	}
+
 	http.Handle("/", r)
 
 	// Start HTTP server
