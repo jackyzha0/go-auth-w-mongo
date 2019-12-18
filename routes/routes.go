@@ -1,3 +1,4 @@
+// Defines routes for HTTP server
 package routes
 
 import (
@@ -16,8 +17,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
+// Create new connection to Users Collection
 var Users = db.New("exampleDB", "users")
 
+// Endpoint to check if connection to database is healthy
 func HealthCheck(w http.ResponseWriter, r *http.Request) {
 	db.Ctx, _ = context.WithTimeout(context.Background(), 2*time.Second)
 	err := db.Client.Ping(db.Ctx, readpref.Primary())
@@ -31,6 +34,7 @@ func HealthCheck(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// !!! Placeholder Function to test FindMany()
 func Test(w http.ResponseWriter, r *http.Request) {
 	filter := bson.D{{}}
 	var res []interface{}
@@ -44,6 +48,7 @@ func Test(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Results found %+v.\n", res)
 }
 
+// Endpoint to users to login through, injects a sessionToken that is valid for 2 hours
 func Login(w http.ResponseWriter, r *http.Request) {
 	var creds schemas.Credentials
 	decodeErr := json.NewDecoder(r.Body).Decode(&creds)
@@ -68,8 +73,10 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	sessionToken, _ := uuid.NewV4()
 
 	// Update User token
+	// !!! TODO
 
 	// catch write fail
+	// !!! TODO
 
 	// Write cookie to client
 	http.SetCookie(w, &http.Cookie{
