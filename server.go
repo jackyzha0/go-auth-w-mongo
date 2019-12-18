@@ -11,8 +11,10 @@ import (
 	mux "github.com/gorilla/mux"
 )
 
+// Port to run application
 const port = 8080
 
+// Define router and start server
 func main() {
 	// Define Mux Router
 	r := mux.NewRouter()
@@ -32,6 +34,7 @@ func main() {
 	}
 }
 
+// Function to create new HTTP server
 func newServer(addr string, router http.Handler) *http.Server {
 	return &http.Server{
 		Addr:         addr,
