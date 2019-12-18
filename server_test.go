@@ -45,24 +45,54 @@ func assertError(t *testing.T, got error, want error) {
 func TestFind(t *testing.T) {
 	t.Run("Find single element present", func(t *testing.T) {
 		// should return single document even when multiple satisfy query
+		filter := bson.D{{"name", "bob"}}
+		var res interface{}
+		err := TestCollection.FindOne(filter, &res)
+
+		want := "[{_id ObjectID(\"5dfa95498e08ca409f93d998\")} {name bob} {surname joe}]"
+
+		assertNoError(t, err)
+		assertJSON(t, res, want)
 	})
 
 	t.Run("Find single not present", func(t *testing.T) {
 		// should error
+		filter := bson.D{{"name", "john"}}
+		var res interface{}
+		err := TestCollection.FindOne(filter, &res)
+		assertError(t, err, ErrFindFailed)
+	})
+
+	t.Run("Find with invalid field", func(t *testing.T) {
+		// should error
+		filter := bson.D{{"birthday", "04/16/01"}}
+		var res interface{}
+		err := TestCollection.FindOne(filter, &res)
+		assertError(t, err, ErrFindFailed)
 	})
 
 	t.Run("Find multiple present", func(t *testing.T) {
 		// should return all documents satisfying query
-		filter := bson.D{{}}
+		filter := bson.D{{"surname", "joe"}}
+		var res []interface{}
+		err := TestCollection.FindMany(filter, &res)
+
+		want := "[[{_id ObjectID(\"5dfa95498e08ca409f93d998\")} {name bob} {surname joe}] [{_id ObjectID(\"5dfa95598e08ca409f93d999\")} {name sally} {surname joe}]]"
+
+		assertNoError(t, err)
+		assertJSON(t, res, want)
+	})
+
+	t.Run("Find multiple not present", func(t *testing.T) {
+		// should return an empty cursor
+		filter := bson.D{{"name", "john"}}
 		var res []interface{}
 		err := TestCollection.FindMany(filter, &res)
 
 		assertNoError(t, err)
-		assertJSON(t, res, "[[{_id ObjectID(\"5dfa95498e08ca409f93d998\")} {name bob} {surname joe}] [{_id ObjectID(\"5dfa95598e08ca409f93d999\")} {name sally} {surname joe}]]")
-	})
-
-	t.Run("Find multiple not present", func(t *testing.T) {
-		// should error
+		if len(res) != 0 {
+			t.Fatalf("got %+v, wanted []", res)
+		}
 	})
 }
 
