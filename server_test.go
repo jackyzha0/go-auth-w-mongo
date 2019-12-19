@@ -44,6 +44,12 @@ func assertMultipleDoc(t *testing.T, got []interface{}, want []Doc) {
 	}
 }
 
+func assertMatchMod(t *testing.T, gotmatch, gotmod int64, wantmatch, wantmod int) {
+	if !(gotmatch == int64(wantmatch) && gotmod == int64(wantmod)) {
+		t.Errorf("wanted %d matches and %d modification, got %d matches and %d modifications", wantmatch, wantmod, gotmatch, gotmod)
+	}
+}
+
 func assertNoError(t *testing.T, got error) {
 	t.Helper()
 	if got != nil {
@@ -139,7 +145,7 @@ func TestFind(t *testing.T) {
 }
 
 func TestInsert(t *testing.T) {
-	t.Run("insert single valid document", func(t *testing.T) {
+	t.Run("Insert single valid document", func(t *testing.T) {
 		// make sure john doesnt exist before
 		filter := bson.D{{"name", "john"}}
 		var res interface{}
@@ -156,7 +162,7 @@ func TestInsert(t *testing.T) {
 		assertNoError(t, err)
 	})
 
-	t.Run("insert many valid documents", func(t *testing.T) {
+	t.Run("Insert many valid documents", func(t *testing.T) {
 		john := Doc{"alex", "smith"}
 		betty := Doc{"alex", "hansen"}
 		sl := []interface{}{john, betty}
@@ -174,18 +180,87 @@ func TestInsert(t *testing.T) {
 	})
 }
 
-func TestDelete(t *testing.T) {
-	t.Run("delete single valid document", func(t *testing.T) {
-		filter := bson.D{{"name", "bob"}, {"surname", "joe"}}
-		err := TestCollection.DeleteOne(filter)
+func TestUpdate(t *testing.T) {
+	t.Run("update single doc set existing field", func(t *testing.T) {
+		rebecca := Doc{"rebecca", "joe"}
+		err := TestCollection.InsertOne(rebecca)
 		assertNoError(t, err)
 
-		var res interface{}
+		filter := bson.D{{"name", "rebecca"}, {"surname", "o'connor"}}
+		var res Doc
 		err = TestCollection.FindOne(filter, &res)
+		assertError(t, err, m.ErrNoDocuments)
+
+		update_filter := bson.D{{"name", "rebecca"}}
+		update := bson.D{{"$set", bson.D{{"surname", "o'connor"}}}}
+		err, match, mod := TestCollection.UpdateOne(update_filter, update)
+		assertMatchMod(t, match, mod, 1, 1)
+		assertNoError(t, err)
+
+		err = TestCollection.FindOne(filter, &res)
+		assertNoError(t, err)
+	})
+
+	t.Run("update single doc set nonexistant field", func(t *testing.T) {
+		kevin := Doc{"kevin", "kwon"}
+		err := TestCollection.InsertOne(kevin)
+		assertNoError(t, err)
+
+		filter := bson.D{{"age", 24}}
+		var res Doc
+		err = TestCollection.FindOne(filter, &res)
+		assertError(t, err, m.ErrNoDocuments)
+
+		update_filter := bson.D{{"name", "kevin"}, {"surname", "kwon"}}
+		update := bson.D{{"$set", bson.D{{"age", 24}}}}
+		err, match, mod := TestCollection.UpdateOne(update_filter, update)
+		assertMatchMod(t, match, mod, 1, 1)
+		assertNoError(t, err)
+
+		err = TestCollection.FindOne(filter, &res)
+		assertNoError(t, err)
+	})
+
+	t.Run("update single doc multiple matches", func(t *testing.T) {
+		jessica := Doc{"jessica", "wu"}
+		err := TestCollection.InsertOne(jessica)
+		assertNoError(t, err)
+
+		update_filter := bson.D{{"surname", "joe"}}
+		update := bson.D{{"$set", bson.D{{"surname", "o'connor"}}}}
+		err, match, mod := TestCollection.UpdateOne(update_filter, update)
+		assertMatchMod(t, match, mod, 2, 1)
+		assertNoError(t, err)
+	})
+
+	t.Run("update multiples docs set existing field", func(t *testing.T) {
+
+	})
+
+	t.Run("update multiple docs set nonexistant field", func(t *testing.T) {
+
+	})
+}
+
+func TestDelete(t *testing.T) {
+	t.Run("Delete single valid document", func(t *testing.T) {
+		albert := Doc{"albert", "yip"}
+		_ = TestCollection.InsertOne(albert)
+		filter := bson.D{{"name", "albert"}, {"surname", "yip"}}
+
+		var res interface{}
+		err := TestCollection.FindOne(filter, &res)
+		assertNoError(t, err)
+
+		err = TestCollection.DeleteOne(filter)
+		assertNoError(t, err)
+
+		var res1 interface{}
+		err = TestCollection.FindOne(filter, &res1)
 		assertError(t, err, m.ErrNoDocuments)
 	})
 
-	t.Run("delete many valid documents", func(t *testing.T) {
+	t.Run("Delete many valid documents", func(t *testing.T) {
 		nick := Doc{"nick", "zheng"}
 		stephen := Doc{"stephen", "zheng"}
 		sl := []interface{}{nick, stephen}
@@ -204,6 +279,7 @@ func TestDelete(t *testing.T) {
 
 		var nres []interface{}
 		err = TestCollection.FindMany(filter, &nres)
+		assertNoError(t, err)
 		assertZeroLength(t, nres)
 	})
 }

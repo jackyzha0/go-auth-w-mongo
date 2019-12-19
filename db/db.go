@@ -50,31 +50,34 @@ func init() {
 	Client = clt
 }
 
-func (db CnctConnection) AbstractOne(filter, update bson.D, res, new interface{}, t int) (err error) {
-	// Set context
-	Ctx, _ = context.WithTimeout(context.Background(), OperationTimeOut*time.Second)
-
-	switch t {
-	case 0: // FindOne
-		err = db.Collection.FindOne(Ctx, filter).Decode(res)
-	}
-
-	// failed to unmarshall
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (db CnctConnection) Drop() (err error) {
 	// Set context
 	Ctx, _ = context.WithTimeout(context.Background(), OperationTimeOut*time.Second)
 	return db.Collection.Drop(Ctx)
 }
 
+func (db CnctConnection) AbstractOne(filter, update bson.D, res, new interface{}, t int) (err error, updateRes *mongo.UpdateResult) {
+	// Set context
+	Ctx, _ = context.WithTimeout(context.Background(), OperationTimeOut*time.Second)
+
+	switch t {
+	case 0: // Find
+		err = db.Collection.FindOne(Ctx, filter).Decode(res)
+	case 1: // Update
+		updateRes, err = db.Collection.UpdateOne(Ctx, filter, update)
+	}
+
+	// failed to unmarshall
+	if err != nil {
+		return err, &mongo.UpdateResult{}
+	}
+
+	return nil, updateRes
+}
+
 func (db CnctConnection) FindOne(filter bson.D, res interface{}) (err error) {
-	return db.AbstractOne(filter, nil, res, nil, 0)
+	err, _ = db.AbstractOne(filter, nil, res, nil, 0)
+	return err
 }
 
 // Simplification of collection.Find()
@@ -110,17 +113,9 @@ func (db CnctConnection) FindMany(filter bson.D, res *[]interface{}) (err error)
 }
 
 // Simplification of collection.UpdateOne() except it doesn't return the document
-func (db CnctConnection) UpdateOne(filter, update bson.D) (err error) {
-	// Set context
-	Ctx, _ = context.WithTimeout(context.Background(), OperationTimeOut*time.Second)
-
-	// Updated result is discarded, you can reimplement if needed
-	_, err = db.Collection.UpdateOne(Ctx, filter, update)
-
-	if err != nil {
-		return err
-	}
-	return nil
+func (db CnctConnection) UpdateOne(filter, update bson.D) (err error, matchCount, modifiedCount int64) {
+	err, updateres := db.AbstractOne(filter, update, nil, nil, 1)
+	return err, updateres.MatchedCount, updateres.ModifiedCount
 }
 
 // Simplification of collection.Update() except it doesn't return a cursor
