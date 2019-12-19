@@ -47,14 +47,21 @@ func assertMultipleDoc(t *testing.T, got []interface{}, want []Doc) {
 func assertNoError(t *testing.T, got error) {
 	t.Helper()
 	if got != nil {
-		t.Fatal("got an error but didn't want one")
+		t.Errorf("got an error %q but didn't want one", got)
+	}
+}
+
+func assertZeroLength(t *testing.T, got []interface{}) {
+	t.Helper()
+	if len(got) != 0 {
+		t.Error("Expected result to be empty, was not")
 	}
 }
 
 func assertError(t *testing.T, got error, want error) {
 	t.Helper()
 	if got == nil {
-		t.Fatal("didn't get an error but wanted one")
+		t.Errorf("didn't get an error but wanted %q", want)
 	}
 
 	if got != want {
@@ -127,9 +134,7 @@ func TestFind(t *testing.T) {
 		err := TestCollection.FindMany(filter, &res)
 
 		assertNoError(t, err)
-		if len(res) != 0 {
-			t.Fatalf("got %+v, wanted []", res)
-		}
+		assertZeroLength(t, res)
 	})
 }
 
@@ -166,5 +171,39 @@ func TestInsert(t *testing.T) {
 
 		assertNoError(t, err)
 		assertMultipleDoc(t, res, want)
+	})
+}
+
+func TestDelete(t *testing.T) {
+	t.Run("delete single valid document", func(t *testing.T) {
+		filter := bson.D{{"name", "bob"}, {"surname", "joe"}}
+		err := TestCollection.DeleteOne(filter)
+		assertNoError(t, err)
+
+		var res interface{}
+		err = TestCollection.FindOne(filter, &res)
+		assertError(t, err, m.ErrNoDocuments)
+	})
+
+	t.Run("delete many valid documents", func(t *testing.T) {
+		nick := Doc{"nick", "zheng"}
+		stephen := Doc{"stephen", "zheng"}
+		sl := []interface{}{nick, stephen}
+		err := TestCollection.InsertMany(sl)
+		assertNoError(t, err)
+
+		filter := bson.D{{"surname", "zheng"}}
+		var res []interface{}
+		err = TestCollection.FindMany(filter, &res)
+		want := []Doc{Doc{"nick", "zheng"}, Doc{"stephen", "zheng"}}
+		assertNoError(t, err)
+		assertMultipleDoc(t, res, want)
+
+		err = TestCollection.DeleteMany(filter)
+		assertNoError(t, err)
+
+		var nres []interface{}
+		err = TestCollection.FindMany(filter, &nres)
+		assertZeroLength(t, nres)
 	})
 }
