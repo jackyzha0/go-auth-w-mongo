@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"time"
 
-	"../db"
 	"../schemas"
+	db "github.com/jackyzha0/monGo-driver-wrapper"
 	uuid "github.com/satori/go.uuid"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -18,7 +18,7 @@ import (
 )
 
 // Create new connection to Users Collection
-var Users = db.New("exampleDB", "users")
+var Users = db.New("mongodb://localhost:27017", "exampleDB", "users")
 
 // Endpoint to check if connection to database is healthy
 func HealthCheck(w http.ResponseWriter, r *http.Request) {
