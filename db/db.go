@@ -4,6 +4,7 @@ package db
 import (
 	"context"
 	"log"
+	"reflect"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -49,12 +50,14 @@ func init() {
 	Client = clt
 }
 
-// Simplification of collection.FindOne()
-func (db CnctConnection) FindOne(filter bson.D, res interface{}) (err error) {
+func (db CnctConnection) AbstractOne(filter, update bson.D, res, new interface{}, t int) (err error) {
 	// Set context
 	Ctx, _ = context.WithTimeout(context.Background(), OperationTimeOut*time.Second)
 
-	err = db.Collection.FindOne(Ctx, filter).Decode(res)
+	switch t {
+	case 0: // FindOne
+		err = db.Collection.FindOne(Ctx, filter).Decode(res)
+	}
 
 	// failed to unmarshall
 	if err != nil {
@@ -64,8 +67,20 @@ func (db CnctConnection) FindOne(filter bson.D, res interface{}) (err error) {
 	return nil
 }
 
+func (db CnctConnection) Drop() (err error) {
+	// Set context
+	Ctx, _ = context.WithTimeout(context.Background(), OperationTimeOut*time.Second)
+	return db.Collection.Drop(Ctx)
+}
+
+func (db CnctConnection) FindOne(filter bson.D, res interface{}) (err error) {
+	return db.AbstractOne(filter, nil, res, nil, 0)
+}
+
 // Simplification of collection.Find()
 func (db CnctConnection) FindMany(filter bson.D, res *[]interface{}) (err error) {
+	arrtype := reflect.TypeOf(res).Elem()
+
 	// Set context
 	Ctx, _ = context.WithTimeout(context.Background(), OperationTimeOut*time.Second)
 
@@ -76,7 +91,7 @@ func (db CnctConnection) FindMany(filter bson.D, res *[]interface{}) (err error)
 	}
 
 	for cursor.Next(Ctx) {
-		var doc interface{}
+		doc := reflect.New(arrtype).Interface()
 		err := cursor.Decode(&doc)
 		if err != nil {
 			return err

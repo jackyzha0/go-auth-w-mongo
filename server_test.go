@@ -1,7 +1,8 @@
 package main
 
 import (
-	"fmt"
+	"os"
+	"reflect"
 	"testing"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -10,17 +11,28 @@ import (
 	"./db"
 )
 
-// Create new connection to Users Collection. To ensure test state, ensure that a Database called `exampleDB` and a Collection called `test` exists and contains two documents
+// Create new connection to Users Collection.
 // {name: "bob", surname: "joe"}
 // {name: "sally", surname: "joe"}
 var TestCollection = db.New("exampleDB", "test")
 
+type Doc struct {
+	Name    string `json:"name"`
+	Surname string `json:"surname"`
+}
+
 // Check to see if JSON content is the same
-func assertJSON(t *testing.T, got interface{}, want string) {
+func assertSingleDoc(t *testing.T, got Doc, want Doc) {
 	t.Helper()
-	got = fmt.Sprintf("%v", got)
 	if got != want {
 		t.Errorf("got %q want %q", got, want)
+	}
+}
+
+func assertMultipleDoc(t *testing.T, got []interface{}, want []Doc) {
+	t.Helper()
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v want %v", got, want)
 	}
 }
 
@@ -42,18 +54,34 @@ func assertError(t *testing.T, got error, want error) {
 	}
 }
 
+func TestMain(m *testing.M) {
+	// setup, add two docs
+	bob := Doc{"bob", "joe"}
+	sally := Doc{"sally", "joe"}
+	sl := []interface{}{bob, sally}
+	TestCollection.InsertMany(sl)
+
+	// run rest of tests
+	exitVal := m.Run()
+
+	// cleanup, drop test collection
+	TestCollection.Drop()
+
+	os.Exit(exitVal)
+}
+
 // Driver to test Find
 func TestFind(t *testing.T) {
 	t.Run("Find single element present", func(t *testing.T) {
 		// should return single document even when multiple satisfy query
 		filter := bson.D{{"name", "bob"}}
-		var res interface{}
+		var res Doc
 		err := TestCollection.FindOne(filter, &res)
 
-		want := "[{_id ObjectID(\"5dfa95498e08ca409f93d998\")} {name bob} {surname joe}]"
+		want := Doc{"bob", "joe"}
 
 		assertNoError(t, err)
-		assertJSON(t, res, want)
+		assertSingleDoc(t, res, want)
 	})
 
 	t.Run("Find single not present", func(t *testing.T) {
@@ -78,10 +106,10 @@ func TestFind(t *testing.T) {
 		var res []interface{}
 		err := TestCollection.FindMany(filter, &res)
 
-		want := "[[{_id ObjectID(\"5dfa95498e08ca409f93d998\")} {name bob} {surname joe}] [{_id ObjectID(\"5dfa95598e08ca409f93d999\")} {name sally} {surname joe}]]"
+		want := []Doc{Doc{"bob", "joe"}, Doc{"sally", "joe"}}
 
 		assertNoError(t, err)
-		assertJSON(t, res, want)
+		assertMultipleDoc(t, res, want)
 	})
 
 	t.Run("Find multiple not present", func(t *testing.T) {
@@ -97,27 +125,29 @@ func TestFind(t *testing.T) {
 	})
 }
 
-// // Driver to test InsertOne
-// func TestInsertOne(t *testing.T) {
-//
-// }
-//
-// // Driver to test InsertMany
-// func TestInsertMany(t *testing.T) {
-// }
-//
-// // Driver to test DeleteOne
-// func TestDeleteOne(t *testing.T) {
-// }
-//
-// // Driver to test DeleteMany
-// func TestDeleteMany(t *testing.T) {
-// }
-//
-// // Driver to test UpdateOne
-// func TestUpdateOne(t *testing.T) {
-// }
-//
-// // Driver to test UpdateMany
-// func TestUpdateMany(t *testing.T) {
-// }
+func TestInsert(t *testing.T) {
+	t.Run("insert single valid document", func(t *testing.T) {
+		// make sure john doesnt exist before
+		filter := bson.D{{"name", "john"}}
+		var res interface{}
+		err := TestCollection.FindOne(filter, &res)
+		assertError(t, err, m.ErrNoDocuments)
+
+		john := Doc{"john", "smith"}
+		err = TestCollection.InsertOne(john)
+		assertNoError(t, err)
+
+		// make sure john exists now
+		filter = bson.D{{"name", "john"}}
+		err = TestCollection.FindOne(filter, &res)
+		assertNoError(t, err)
+	})
+
+	// t.Run("insert many valid documents", func(t *testing.T) {
+	//   john := Doc{"john", "smith"}
+	//   betty := Doc{"betty", "hansen"}
+	//   sl := []Doc{john, betty}
+	//   err = TestCollection.InsertMany(sl)
+	//   assertNoError(t, err)
+	// })
+}
