@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 	"reflect"
 	"testing"
@@ -31,7 +32,16 @@ func assertSingleDoc(t *testing.T, got Doc, want Doc) {
 
 func assertMultipleDoc(t *testing.T, got []interface{}, want []Doc) {
 	t.Helper()
-	if !reflect.DeepEqual(got, want) {
+	var val []Doc
+	for _, el := range got {
+		var d Doc
+		bsonBytes, _ := bson.Marshal(el)
+		bson.Unmarshal(bsonBytes, &d)
+		val = append(val, d)
+	}
+
+	log.Printf("real %+v", val)
+	if !reflect.DeepEqual(val, want) {
 		t.Errorf("got %v want %v", got, want)
 	}
 }
