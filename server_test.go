@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"os"
 	"reflect"
 	"testing"
@@ -40,9 +39,8 @@ func assertMultipleDoc(t *testing.T, got []interface{}, want []Doc) {
 		val = append(val, d)
 	}
 
-	log.Printf("real %+v", val)
 	if !reflect.DeepEqual(val, want) {
-		t.Errorf("got %v want %v", got, want)
+		t.Errorf("got %+v want %+v", got, want)
 	}
 }
 
@@ -153,11 +151,20 @@ func TestInsert(t *testing.T) {
 		assertNoError(t, err)
 	})
 
-	// t.Run("insert many valid documents", func(t *testing.T) {
-	//   john := Doc{"john", "smith"}
-	//   betty := Doc{"betty", "hansen"}
-	//   sl := []Doc{john, betty}
-	//   err = TestCollection.InsertMany(sl)
-	//   assertNoError(t, err)
-	// })
+	t.Run("insert many valid documents", func(t *testing.T) {
+		john := Doc{"alex", "smith"}
+		betty := Doc{"alex", "hansen"}
+		sl := []interface{}{john, betty}
+		err := TestCollection.InsertMany(sl)
+		assertNoError(t, err)
+
+		filter := bson.D{{"name", "alex"}}
+		var res []interface{}
+		err = TestCollection.FindMany(filter, &res)
+
+		want := []Doc{Doc{"alex", "smith"}, Doc{"alex", "hansen"}}
+
+		assertNoError(t, err)
+		assertMultipleDoc(t, res, want)
+	})
 }
