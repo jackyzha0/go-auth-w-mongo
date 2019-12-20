@@ -1,9 +1,7 @@
-// Defines routes for HTTP server
 package routes
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -15,6 +13,8 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
+
+	"github.com/gorilla/schema"
 )
 
 // Create new connection to Users Collection
@@ -36,13 +36,18 @@ func HealthCheck(w http.ResponseWriter, r *http.Request) {
 
 // Endpoint to users to login through, injects a sessionToken that is valid for 2 hours
 func Login(w http.ResponseWriter, r *http.Request) {
-	var creds schemas.Credentials
-	decodeErr := json.NewDecoder(r.Body).Decode(&creds)
+	creds := new(schemas.Credentials)
+
+	// parse Form request
+	r.ParseForm()
+	decoder := schema.NewDecoder()
+	// r.PostForm is a map of our POST form values
+	decodeErr := decoder.Decode(creds, r.PostForm)
 
 	if decodeErr != nil {
 		// If the structure of the body is wrong, return an HTTP error
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Bad Request, structure incorrect.\n")
+		fmt.Fprintf(w, "Bad Request, structure incorrect. Please include a password and email.\n")
 		return
 	}
 
@@ -57,6 +62,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	// New Session Token
 	sessionToken, _ := uuid.NewV4()
+	expiry := time.Now().Add(120 * time.Minute)
+	log.Printf("current time is %v, token expires %v", time.Now(), expiry)
 
 	// Update User token
 	// !!! TODO
@@ -68,7 +75,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:    "session_token",
 		Value:   sessionToken.String(),
-		Expires: time.Now().Add(120 * time.Minute),
+		Expires: expiry,
 	})
 	w.WriteHeader(http.StatusOK)
 
