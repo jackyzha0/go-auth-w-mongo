@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"../schemas"
+	"github.com/jackyzha0/go-auth-w-mongo/schemas"
 	db "github.com/jackyzha0/monGo-driver-wrapper"
 	uuid "github.com/satori/go.uuid"
 
@@ -61,7 +61,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// New Session Token
-	sessionToken, _ := uuid.NewV4()
+	sessionToken := uuid.NewV4()
 	expiry := time.Now().Add(120 * time.Minute)
 	log.Printf("current time is %v, token expires %v", time.Now(), expiry)
 
