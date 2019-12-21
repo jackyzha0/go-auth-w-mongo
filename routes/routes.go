@@ -12,7 +12,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/gorilla/schema"
 )
@@ -23,7 +23,7 @@ var Users = db.New("mongodb://localhost:27017", "exampleDB", "users")
 // Endpoint to check if connection to database is healthy
 func HealthCheck(w http.ResponseWriter, r *http.Request) {
 	db.Ctx, _ = context.WithTimeout(context.Background(), 2*time.Second)
-	err := db.Client.Ping(db.Ctx, readpref.Primary())
+	err := db.Client.Ping(db.Ctx, mongo.readpref.Primary())
 
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
@@ -64,8 +64,6 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	sessionToken := uuid.NewV4()
 	expiry := time.Now().Add(120 * time.Minute)
 	expiryStr := expiry.Format(time.RFC3339)
-	// to parse time back, do
-	// t, err := time.Parse(time.RFC3339, str)
 
 	// Update User
 	update := bson.D{{
@@ -85,16 +83,55 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		Value:   sessionToken.String(),
 		Expires: expiry,
 	})
-	w.WriteHeader(http.StatusOK)
-
 	log.Printf("User %q logged in with token %q", res.Name, sessionToken.String())
+	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+	return
 }
 
 // Endpoint to register a new user
 func Register(w http.ResponseWriter, r *http.Request) {
-
 }
 
 func Dashboard(w http.ResponseWriter, r *http.Request) {
+	c, cookieFetchErr := r.Cookie("session_token")
 
+	// not auth'ed, redirect to login
+	if cookieFetchErr != nil {
+		if err == http.ErrNoCookie {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// if no err, get cookie value
+	sessionToken := c.Value
+
+	filter := bson.D{{"session_token", sessionToken}}
+	var res schemas.User
+	findErr := Users.FindOne(filter, &res)
+
+	if findErr != nil {
+
+		// no user with matching session_token
+		if findErr == mongo.ErrNoDocuments {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+
+		// other error
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	expireTime, timeParseErr := time.Parse(time.RFC3339, res.SessionExpires)
+
+	// token expired
+	if time.Now().After(expireTime) {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// user is authed! 
 }
