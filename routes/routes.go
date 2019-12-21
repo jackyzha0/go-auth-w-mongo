@@ -39,12 +39,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	creds := new(schemas.Credentials)
 
 	// parse Form request
-	r.ParseForm()
+	parseErr := r.ParseForm()
 	decoder := schema.NewDecoder()
 	// r.PostForm is a map of our POST form values
-	decodeErr := decoder.Decode(creds, r.PostForm)
+	parseErr = decoder.Decode(creds, r.PostForm)
 
-	if decodeErr != nil {
+	if parseErr != nil {
 		// If the structure of the body is wrong, return an HTTP error
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "Bad Request, structure incorrect. Please include a password and email.\n")
@@ -53,9 +53,9 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	filter := bson.D{{"email", creds.Email}}
 	var res schemas.User
-	err := Users.FindOne(filter, &res)
+	findErr := Users.FindOne(filter, &res)
 
-	if err != nil {
+	if findErr != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -63,13 +63,21 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	// New Session Token
 	sessionToken := uuid.NewV4()
 	expiry := time.Now().Add(120 * time.Minute)
-	log.Printf("current time is %v, token expires %v", time.Now(), expiry)
+	expiryStr := expiry.Format(time.RFC3339)
+	// to parse time back, do
+	// t, err := time.Parse(time.RFC3339, str)
 
-	// Update User token
-	// !!! TODO
+	// Update User
+	update := bson.D{{
+		"$set", bson.D{
+			{"session_token", sessionToken.String()},
+			{"session_expires", expiryStr}}}}
+	_,_,updateErr := Users.UpdateOne(filter, update)
 
-	// catch write fail
-	// !!! TODO
+	if updateErr != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	// Write cookie to client
 	http.SetCookie(w, &http.Cookie{
@@ -82,6 +90,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	log.Printf("User %q logged in with token %q", res.Name, sessionToken.String())
 }
 
+// Endpoint to register a new user
 func Register(w http.ResponseWriter, r *http.Request) {
 
 }

@@ -14,9 +14,6 @@ import (
 // Port to run application
 const port = 8080
 
-// Whether to enable debug routes
-const DEBUG = true
-
 // Define router and start server
 func main() {
 	// Define Mux Router

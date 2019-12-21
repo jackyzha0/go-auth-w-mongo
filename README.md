@@ -12,4 +12,4 @@ This repository was created as an exercise in Go development. The following rout
 /dbhealthcheck "checks if connection to MongoDB is healthy"
 ```
 
-You can build the binary by running `go build -o server` and run it via `./server` Run the sanity check tests by doing `go test`
+You can build the binary by running `go build` and run it via `./go-auth-w-mongo` Run the sanity check tests by doing `go test`
