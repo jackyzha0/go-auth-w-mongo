@@ -3,9 +3,9 @@ package routes
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
+	"log"
 
 	"github.com/jackyzha0/go-auth-w-mongo/schemas"
 	db "github.com/jackyzha0/monGo-driver-wrapper"
@@ -13,17 +13,45 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 
 	"github.com/gorilla/schema"
 )
 
-// Create new connection to Users Collection
+// Users is a new connection to Users Collection
 var Users = db.New("mongodb://localhost:27017", "exampleDB", "users")
 
-// Endpoint to check if connection to database is healthy
+// refresh/set user token by email
+func refreshToken(email string) (c *http.Cookie, ok bool) {
+	// New Session Token
+	sessionToken := uuid.NewV4()
+	expiry := time.Now().Add(120 * time.Minute)
+	expiryStr := expiry.Format(time.RFC3339)
+
+	// Update User
+	filter := bson.D{{"email", email}}
+	update := bson.D{{
+		"$set", bson.D{
+			{"session_token", sessionToken.String()},
+			{"session_expires", expiryStr}}}}
+	_,_,updateErr := Users.UpdateOne(filter, update)
+
+	if updateErr != nil {
+		return nil, false
+	}
+
+	return &http.Cookie{
+		Name:    "session_token",
+		Value:   sessionToken.String(),
+		Expires: expiry,
+	}, true
+}
+
+
+// HealthCheck is an endpoint to check if connection to database is healthy
 func HealthCheck(w http.ResponseWriter, r *http.Request) {
 	db.Ctx, _ = context.WithTimeout(context.Background(), 2*time.Second)
-	err := db.Client.Ping(db.Ctx, mongo.readpref.Primary())
+	err := db.Client.Ping(db.Ctx, readpref.Primary())
 
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
@@ -34,7 +62,7 @@ func HealthCheck(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Endpoint to users to login through, injects a sessionToken that is valid for 2 hours
+// Login is an endpoint to users to login through, injects a sessionToken that is valid for 2 hours
 func Login(w http.ResponseWriter, r *http.Request) {
 	creds := new(schemas.Credentials)
 
@@ -60,44 +88,31 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// New Session Token
-	sessionToken := uuid.NewV4()
-	expiry := time.Now().Add(120 * time.Minute)
-	expiryStr := expiry.Format(time.RFC3339)
+	c, ok := refreshToken(res.Email)
 
-	// Update User
-	update := bson.D{{
-		"$set", bson.D{
-			{"session_token", sessionToken.String()},
-			{"session_expires", expiryStr}}}}
-	_,_,updateErr := Users.UpdateOne(filter, update)
-
-	if updateErr != nil {
+	if !ok {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	// Write cookie to client
-	http.SetCookie(w, &http.Cookie{
-		Name:    "session_token",
-		Value:   sessionToken.String(),
-		Expires: expiry,
-	})
-	log.Printf("User %q logged in with token %q", res.Name, sessionToken.String())
+	http.SetCookie(w, c)
+
 	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 	return
 }
 
-// Endpoint to register a new user
+// Register is the endpoint to register a new user
 func Register(w http.ResponseWriter, r *http.Request) {
 }
 
+// Dashboard is the endpoint to display a welcome page to auth'd users
 func Dashboard(w http.ResponseWriter, r *http.Request) {
 	c, cookieFetchErr := r.Cookie("session_token")
 
 	// not auth'ed, redirect to login
 	if cookieFetchErr != nil {
-		if err == http.ErrNoCookie {
+		if cookieFetchErr == http.ErrNoCookie {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
@@ -109,6 +124,7 @@ func Dashboard(w http.ResponseWriter, r *http.Request) {
 	sessionToken := c.Value
 
 	filter := bson.D{{"session_token", sessionToken}}
+	log.Printf("filter -> %+v", filter)
 	var res schemas.User
 	findErr := Users.FindOne(filter, &res)
 
@@ -125,7 +141,13 @@ func Dashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("parsed struct %+v", res)
 	expireTime, timeParseErr := time.Parse(time.RFC3339, res.SessionExpires)
+
+	if timeParseErr != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	// token expired
 	if time.Now().After(expireTime) {
