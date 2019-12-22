@@ -32,8 +32,8 @@ func refreshToken(email string) (c *http.Cookie, ok bool) {
 	filter := bson.D{{"email", email}}
 	update := bson.D{{
 		"$set", bson.D{
-			{"session_token", sessionToken.String()},
-			{"session_expires", expiryStr}}}}
+			{"sessionToken", sessionToken.String()},
+			{"sessionExpires", expiryStr}}}}
 	_,_,updateErr := Users.UpdateOne(filter, update)
 
 	if updateErr != nil {
@@ -123,7 +123,7 @@ func Dashboard(w http.ResponseWriter, r *http.Request) {
 	// if no err, get cookie value
 	sessionToken := c.Value
 
-	filter := bson.D{{"session_token", sessionToken}}
+	filter := bson.D{{"sessionToken", sessionToken}}
 	log.Printf("filter -> %+v", filter)
 	var res schemas.User
 	findErr := Users.FindOne(filter, &res)
