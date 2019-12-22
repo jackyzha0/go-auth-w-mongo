@@ -1,3 +1,4 @@
+// Defines routes for the app
 package routes
 
 import (

@@ -3,12 +3,12 @@ package schemas
 
 // Describes app user
 type User struct {
-	Password       string `json:"password"`
-	Name           string `json:"name"`
-	Email          string `json:"email"`
-	SessionExpires string `json:"sessionExpires"`
-	SessionToken   string `json:"sessionToken"`
-	IsAdmin        bool   `json:"isAdmin"`
+	Password       string `json:"password" bson:"password"`
+	Name           string `json:"name" bson:"name"`
+	Email          string `json:"email" bson:"email"`
+	SessionExpires string `json:"sessionExpires" bson:"sessionExpires"`
+	SessionToken   string `json:"sessionToken" bson:"sessionToken"`
+	IsAdmin        bool   `json:"isAdmin" bson:"isAdmin"`
 }
 
 // Describes login credentials
