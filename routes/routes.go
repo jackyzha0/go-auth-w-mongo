@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-	"log"
 
 	"github.com/jackyzha0/go-auth-w-mongo/schemas"
 	db "github.com/jackyzha0/monGo-driver-wrapper"
@@ -16,10 +15,20 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 
 	"github.com/gorilla/schema"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // Users is a new connection to Users Collection
 var Users = db.New("mongodb://localhost:27017", "exampleDB", "users")
+
+// hashes and salts current password
+func hashSalt(pass []byte) (string, error) {
+    hash, err := bcrypt.GenerateFromPassword(pass, bcrypt.MinCost)
+    if err != nil {
+        return "", err
+    }
+    return string(hash), nil
+}
 
 // refresh/set user token by email
 func refreshToken(email string) (c *http.Cookie, ok bool) {
@@ -83,11 +92,24 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	var res schemas.User
 	findErr := Users.FindOne(filter, &res)
 
+	// can't find user, email doesnt exist in db
 	if findErr != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
+	// check entered password with db password
+	gotPass := []byte(creds.Password)
+	dbPass := []byte(res.Password)
+	compErr := bcrypt.CompareHashAndPassword(gotPass, dbPass)
+
+	// if mismatched, return unauth status
+	if compErr != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// auth ok, refresh/set user token
 	c, ok := refreshToken(res.Email)
 
 	if !ok {
@@ -104,6 +126,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 // Register is the endpoint to register a new user
 func Register(w http.ResponseWriter, r *http.Request) {
+	// might want to make this an admin only endpoint in the future
 }
 
 // Dashboard is the endpoint to display a welcome page to auth'd users
@@ -124,7 +147,6 @@ func Dashboard(w http.ResponseWriter, r *http.Request) {
 	sessionToken := c.Value
 
 	filter := bson.D{{"sessionToken", sessionToken}}
-	log.Printf("filter -> %+v", filter)
 	var res schemas.User
 	findErr := Users.FindOne(filter, &res)
 
@@ -141,9 +163,10 @@ func Dashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("parsed struct %+v", res)
+	// parse time
 	expireTime, timeParseErr := time.Parse(time.RFC3339, res.SessionExpires)
 
+	// token time invalid
 	if timeParseErr != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -155,5 +178,8 @@ func Dashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// user is authed! 
+	// user is authed! display data or do something
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Welcome back %s!\n", res.Name)
+	return
 }
