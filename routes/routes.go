@@ -19,6 +19,15 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// token status
+const (
+	TokenValid int = 0
+	TokenBadStruct int = 1
+	TokenExpired int = 2
+	TokenNotAdmin int = 3
+	TokenOtherErr int = -1
+)
+
 // Users is a new connection to Users Collection
 var Users = db.New("mongodb://localhost:27017", "exampleDB", "users")
 
@@ -55,6 +64,57 @@ func refreshToken(email string) (c *http.Cookie, ok bool) {
 		Value:   sessionToken.String(),
 		Expires: expiry,
 	}, true
+}
+
+// check if valid token
+func isValidToken(r *http.Request, adminCheck bool) (status int, retUser schemas.User) {
+	c, cookieFetchErr := r.Cookie("session_token")
+
+	// not auth'ed, redirect to login
+	if cookieFetchErr != nil {
+		if cookieFetchErr == http.ErrNoCookie {
+			return TokenExpired, schemas.User{}
+		}
+		return TokenBadStruct, schemas.User{}
+	}
+
+	// if no err, get cookie value
+	sessionToken := c.Value
+
+	filter := bson.D{{"sessionToken", sessionToken}}
+	var res schemas.User
+	findErr := Users.FindOne(filter, &res)
+
+	if findErr != nil {
+
+		// no user with matching session_token
+		if findErr == mongo.ErrNoDocuments {
+			return TokenExpired, schemas.User{}
+		}
+
+		// other error
+		return TokenOtherErr, schemas.User{}
+	}
+
+	// parse time
+	expireTime, timeParseErr := time.Parse(time.RFC3339, res.SessionExpires)
+
+	// token time invalid
+	if timeParseErr != nil {
+		return TokenBadStruct, schemas.User{}
+	}
+
+	// token expired
+	if time.Now().After(expireTime) {
+		return TokenExpired, schemas.User{}
+	}
+
+	if adminCheck && !res.IsAdmin {
+		return TokenNotAdmin, schemas.User{}
+	}
+
+	// token ok
+	return TokenValid, res
 }
 
 
@@ -127,7 +187,24 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 // Register is the endpoint to register a new user
 func Register(w http.ResponseWriter, r *http.Request) {
-	// might want to make this an admin only endpoint in the future
+	stat, _ := isValidToken(r, true)
+
+	// check if error or not authed
+	switch stat {
+	case TokenExpired:
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	case TokenBadStruct:
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	case TokenNotAdmin:
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	case TokenOtherErr:
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	newUser := new(schemas.User)
 
 	// parse Form request
@@ -168,50 +245,17 @@ func Register(w http.ResponseWriter, r *http.Request) {
 
 // Dashboard is the endpoint to display a welcome page to auth'd users
 func Dashboard(w http.ResponseWriter, r *http.Request) {
-	c, cookieFetchErr := r.Cookie("session_token")
+	stat, res := isValidToken(r, false)
 
-	// not auth'ed, redirect to login
-	if cookieFetchErr != nil {
-		if cookieFetchErr == http.ErrNoCookie {
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
-			return
-		}
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	// if no err, get cookie value
-	sessionToken := c.Value
-
-	filter := bson.D{{"sessionToken", sessionToken}}
-	var res schemas.User
-	findErr := Users.FindOne(filter, &res)
-
-	if findErr != nil {
-
-		// no user with matching session_token
-		if findErr == mongo.ErrNoDocuments {
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
-			return
-		}
-
-		// other error
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	// parse time
-	expireTime, timeParseErr := time.Parse(time.RFC3339, res.SessionExpires)
-
-	// token time invalid
-	if timeParseErr != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	// token expired
-	if time.Now().After(expireTime) {
+	switch stat {
+	case TokenExpired:
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	case TokenBadStruct:
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	case TokenOtherErr:
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
