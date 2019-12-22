@@ -8,6 +8,7 @@ type User struct {
 	Email          string `json:"email"`
 	SessionExpires string `json:"sessionExpires"`
 	SessionToken   string `json:"sessionToken"`
+	IsAdmin        bool   `json:"isAdmin"`
 }
 
 // Describes login credentials

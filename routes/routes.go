@@ -101,7 +101,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	// check entered password with db password
 	gotPass := []byte(creds.Password)
 	dbPass := []byte(res.Password)
-	compErr := bcrypt.CompareHashAndPassword(gotPass, dbPass)
+	compErr := bcrypt.CompareHashAndPassword(dbPass, gotPass)
 
 	// if mismatched, return unauth status
 	if compErr != nil {
@@ -127,6 +127,42 @@ func Login(w http.ResponseWriter, r *http.Request) {
 // Register is the endpoint to register a new user
 func Register(w http.ResponseWriter, r *http.Request) {
 	// might want to make this an admin only endpoint in the future
+	newUser := new(schemas.User)
+
+	// parse Form request
+	parseErr := r.ParseForm()
+	decoder := schema.NewDecoder()
+	parseErr = decoder.Decode(newUser, r.PostForm)
+	if parseErr != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Bad Request, structure incorrect.\n")
+		return
+	}
+
+	// create non-admin
+	newUser.IsAdmin = false
+
+	// hash password
+    hash, hashErr := bcrypt.GenerateFromPassword([]byte(newUser.Password), bcrypt.MinCost)
+    if hashErr != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+    }
+    newUser.Password = string(hash)
+
+	// insert document
+	ID, insertErr := Users.InsertOne(newUser)
+
+	// email already exists
+	if insertErr != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Bad Request, user with that email exists.\n")
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Created new user with ID %s.\n", ID)
+	return
 }
 
 // Dashboard is the endpoint to display a welcome page to auth'd users
