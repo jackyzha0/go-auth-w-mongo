@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jackyzha0/go-auth-w-mongo/routes"
+	"github.com/jackyzha0/go-auth-w-mongo/middleware"
 
 	mux "github.com/gorilla/mux"
 )
@@ -18,9 +19,9 @@ const port = 8080
 func main() {
 	// Define Mux Router
 	r := mux.NewRouter()
-	r.HandleFunc("/register", routes.Register)
+	r.HandleFunc("/register", middleware.Auth(routes.Register, true))
 	r.HandleFunc("/login", routes.Login)
-	r.HandleFunc("/dashboard", routes.Dashboard)
+	r.HandleFunc("/dashboard", middleware.Auth(routes.Dashboard, false))
 
 	http.Handle("/", r)
 

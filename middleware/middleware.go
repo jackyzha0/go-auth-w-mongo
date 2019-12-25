@@ -6,8 +6,8 @@ import (
 
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
-	"github.com/jackyzha0/go-auth-w-mongo/schemas"
 	"github.com/jackyzha0/go-auth-w-mongo/routes"
+	"github.com/jackyzha0/go-auth-w-mongo/schemas"
 )
 
 func Auth(req http.HandlerFunc, adminCheck bool) http.HandlerFunc {
@@ -35,13 +35,13 @@ func Auth(req http.HandlerFunc, adminCheck bool) http.HandlerFunc {
 
 			// no user with matching session_token
 			if findErr == mgo.ErrNotFound {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
+				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				return
 			}
 
 			// other error
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 
 		// parse time
@@ -49,14 +49,14 @@ func Auth(req http.HandlerFunc, adminCheck bool) http.HandlerFunc {
 
 		// token time invalid
 		if timeParseErr != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+			w.WriteHeader(http.StatusBadRequest)
+			return
 		}
 
 		// token expired
 		if time.Now().After(expireTime) {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
 		}
 
 		if adminCheck && !res.IsAdmin {
@@ -65,6 +65,7 @@ func Auth(req http.HandlerFunc, adminCheck bool) http.HandlerFunc {
 		}
 
 		// token ok
+		r.Header.Set("X-res-email", res.Email)
 		req(w, r)
 	}
 }
