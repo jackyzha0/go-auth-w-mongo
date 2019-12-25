@@ -16,10 +16,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var session, _ = mgo.Dial("mongodb://192.168.1.7:27017")
+var session, _ = mgo.Dial("mongodb://localhost:27017")
 
 // Users is a new connection to Users Collection
-var Users = session.DB("alc_data").C("Users")
+var Users = session.DB("exampleDB").C("Users")
 
 // refresh/set user token by email
 func refreshToken(email string) (c *http.Cookie, ok bool) {
@@ -120,9 +120,6 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "error: %v", parseErr)
 		return
 	}
-
-	// create non-admin
-	newUser.IsAdmin = false
 
 	// hash password
 	hash, hashErr := bcrypt.GenerateFromPassword([]byte(newUser.Password), bcrypt.MinCost)
