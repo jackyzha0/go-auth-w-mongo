@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/jackyzha0/go-auth-w-mongo/routes"
 	"github.com/jackyzha0/go-auth-w-mongo/middleware"
+	"github.com/jackyzha0/go-auth-w-mongo/routes"
 
 	mux "github.com/gorilla/mux"
 )
