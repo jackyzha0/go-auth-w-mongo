@@ -6,10 +6,9 @@
 This repository was created as an exercise in Go development. The following routes have been implemented:
 
 ```go
-/register "register a new user"
+/register "register a new user (Admin Only)"
 /login "creates a token if user is registered"
 /dashboard "simple dashboard to display user's name"
-/dbhealthcheck "checks if connection to MongoDB is healthy"
 ```
 
 You can build the binary by running `go build` and run it via `./go-auth-w-mongo` Run the sanity check tests by doing `go test`

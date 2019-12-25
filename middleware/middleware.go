@@ -21,6 +21,7 @@ func Auth(req http.HandlerFunc, adminCheck bool) http.HandlerFunc {
 				return
 			}
 			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "Bad Request, could not read cookie.\n")
 			return
 		}
 
@@ -36,6 +37,7 @@ func Auth(req http.HandlerFunc, adminCheck bool) http.HandlerFunc {
 			// no user with matching session_token
 			if findErr == mgo.ErrNotFound {
 				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				fmt.Fprintf(w, "Bad Request, no user with that email exists.\n")
 				return
 			}
 
@@ -61,6 +63,7 @@ func Auth(req http.HandlerFunc, adminCheck bool) http.HandlerFunc {
 
 		if adminCheck && !res.IsAdmin {
 			w.WriteHeader(http.StatusUnauthorized)
+			fmt.Fprintf(w, "Bad Request, not admin.\n")
 			return
 		}
 
