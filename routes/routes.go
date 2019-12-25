@@ -16,6 +16,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// session is a connection to the given URI
 var session, _ = mgo.Dial("mongodb://localhost:27017")
 
 // Users is a new connection to Users Collection

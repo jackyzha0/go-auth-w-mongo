@@ -1,3 +1,5 @@
+// Package middleware defines possible middleware
+// that can be used by the router.
 package middleware
 
 import (
@@ -11,6 +13,8 @@ import (
 	"github.com/jackyzha0/go-auth-w-mongo/schemas"
 )
 
+// Auth is a simple authentication middleware with an option to
+// check for if the user is an admin or not
 func Auth(req http.HandlerFunc, adminCheck bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c, cookieFetchErr := r.Cookie("session_token")

@@ -6,7 +6,7 @@
 This repository was created as an exercise in Go development. This serves as a barebones boilerplate for a webapp that requires authentication via a database.
 
 ### Setup
-You can build the binary by running `go build` and run it via `./go-auth-w-mongo` Run the sanity check tests by doing `go test`
+You can build the binary by running `go build` and run it via `./go-auth-w-mongo`
 
 Please make sure you have a local MongoDB instance running before attempting to run anything here! A simple auth flow may look something like this
 
