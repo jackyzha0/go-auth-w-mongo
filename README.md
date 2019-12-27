@@ -21,6 +21,7 @@ The following routes have been implemented:
 /register "register a new user"
 /login "authenticates a user"
 /dashboard "simple dashboard to display user's name"
+/logout "destroys current user's session"
 ```
 
 ### `/register`
@@ -51,6 +52,13 @@ The `/dashboard` endpoint takes advantage of the fact that our middleware inject
 
 ```bash
 curl --location --request GET 'localhost:8080/dashboard'
+```
+
+### `/logout`
+The `/logout` also uses the `X-res-email` header to make the logout code super simple and short. Basically, it just resets the user's session on the database side, so auth will redirect to login.
+
+```bash
+curl --location --request GET 'localhost:8080/logout'
 ```
 
 ## Adding to the project

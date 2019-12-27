@@ -22,6 +22,7 @@ func main() {
 	r.HandleFunc("/register", middleware.Auth(routes.Register, true))
 	r.HandleFunc("/login", routes.Login)
 	r.HandleFunc("/dashboard", middleware.Auth(routes.Dashboard, false))
+	r.HandleFunc("/logout", middleware.Auth(routes.Logout, false))
 
 	http.Handle("/", r)
 

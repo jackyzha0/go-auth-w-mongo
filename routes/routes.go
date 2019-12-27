@@ -102,6 +102,21 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 }
 
+// Logout is an endpoint to destroy the current user session
+func Logout(w http.ResponseWriter, r *http.Request) {
+	e := r.Header.Get("X-res-email")
+	
+	// Clear user token
+	update := bson.M{
+		"$set": bson.M{"sessionToken": ""}}
+	updateErr := Users.Update(bson.M{"email": e}, update)
+
+	if updateErr != nil {
+		views.ErrorPageView(w, http.StatusBadRequest)
+		return
+	}
+}
+
 // Register is the endpoint to register a new user
 func Register(w http.ResponseWriter, r *http.Request) {
 	newUser := new(schemas.User)
