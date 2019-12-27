@@ -112,7 +112,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 	updateErr := Users.Update(bson.M{"email": e}, update)
 
 	if updateErr != nil {
-		views.ErrorPageView(w, http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 }
