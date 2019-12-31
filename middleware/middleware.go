@@ -3,9 +3,10 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
@@ -26,7 +27,7 @@ func Auth(req http.HandlerFunc, adminCheck bool) http.HandlerFunc {
 				return
 			}
 			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, "Bad Request, could not read cookie.\n")
+			log.Warn("Bad Auth Attempt: Could not read cookie.")
 			return
 		}
 
@@ -42,12 +43,13 @@ func Auth(req http.HandlerFunc, adminCheck bool) http.HandlerFunc {
 			// no user with matching session_token
 			if findErr == mgo.ErrNotFound {
 				http.Redirect(w, r, "/login", http.StatusSeeOther)
-				fmt.Fprintf(w, "Bad Request, no user with that email exists.\n")
+				log.Warnf("Bad Auth Attempt: No user with token %s.", sessionToken)
 				return
 			}
 
 			// other error
 			w.WriteHeader(http.StatusInternalServerError)
+			log.Warn("Bad Auth Attempt: Internal Error when finding user.")
 			return
 		}
 
@@ -57,6 +59,7 @@ func Auth(req http.HandlerFunc, adminCheck bool) http.HandlerFunc {
 		// token time invalid
 		if timeParseErr != nil {
 			w.WriteHeader(http.StatusBadRequest)
+			log.Warn("Bad Auth Attempt: Session expiry date wrong.")
 			return
 		}
 
@@ -68,7 +71,7 @@ func Auth(req http.HandlerFunc, adminCheck bool) http.HandlerFunc {
 
 		if adminCheck && !res.IsAdmin {
 			w.WriteHeader(http.StatusUnauthorized)
-			fmt.Fprintf(w, "Bad Request, not admin.\n")
+			log.Warn("Bad Auth Attempt: Not admin. Attempt from user %v", res.Email)
 			return
 		}
 

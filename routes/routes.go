@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/jackyzha0/go-auth-w-mongo/schemas"
 	uuid "github.com/satori/go.uuid"
 
@@ -39,6 +41,7 @@ func refreshToken(email string) (c *http.Cookie, ok bool) {
 		return nil, false
 	}
 
+	log.Infof("Refreshing token for user %v", email)
 	return &http.Cookie{
 		Name:    "session_token",
 		Value:   sessionToken.String(),
@@ -66,6 +69,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "error: %v", parseErr)
 		return
 	}
+
+	log.Infof("Login attempt from %v", creds.Email)
 
 	filter := bson.M{"email": creds.Email}
 	var res schemas.User
@@ -156,7 +161,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Created new user")
+	log.Infof("Created new user with email %v", newUser.Email)
 }
 
 // Dashboard is the endpoint to display a welcome page to auth'd users
