@@ -8,8 +8,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/jackyzha0/go-auth-w-mongo/schemas"
 	"github.com/jackyzha0/go-auth-w-mongo/db"
+	"github.com/jackyzha0/go-auth-w-mongo/schemas"
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/globalsign/mgo/bson"
@@ -104,7 +104,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 // Logout is an endpoint to destroy the current user session
 func Logout(w http.ResponseWriter, r *http.Request) {
 	e := r.Header.Get("X-res-email")
-	
+
 	// Clear user token
 	update := bson.M{
 		"$set": bson.M{"sessionToken": ""}}

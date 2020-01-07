@@ -1,23 +1,23 @@
 package db
 
 import (
+	"crypto/tls"
+	"net"
+
 	"github.com/globalsign/mgo"
-    "crypto/tls"
-    "net"
 )
 
 var Session *mgo.Session
 var Users *mgo.Collection
 
 const (
-	DB_LOCAL = 0
-	DB_LOCAL_W_AUTH = 1
-	DB_ATLAS = 2
+	DB_LOCAL        = 0 // local mongo instance
+	DB_LOCAL_W_AUTH = 1 // local mongo instance with credentials
+	DB_ATLAS        = 2 // mongo atlas sharded instance
 )
 
 const DB_TYPE = DB_LOCAL
 
-// Use atlas connection
 func init() {
 
 	switch DB_TYPE {
@@ -48,16 +48,16 @@ func init() {
 
 	case DB_ATLAS:
 
-		// set Atlas URI 
+		// set Atlas URI
 		mongoURI := "mongodb://<username>:<password>@<shard of ip (should end in .mongodb.net)>:27017"
 		dialInfo, err := mgo.ParseURL(mongoURI)
 
 		tlsConfig := &tls.Config{}
 		dialInfo.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
-		    conn, err := tls.Dial("tcp", addr.String(), tlsConfig)
-		    return conn, err
+			conn, err := tls.Dial("tcp", addr.String(), tlsConfig)
+			return conn, err
 		}
-		
+
 		// dial session with info
 		Session, err = mgo.DialWithInfo(dialInfo)
 
