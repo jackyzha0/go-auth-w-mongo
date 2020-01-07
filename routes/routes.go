@@ -10,7 +10,7 @@ import (
 
 	"github.com/jackyzha0/go-auth-w-mongo/db"
 	"github.com/jackyzha0/go-auth-w-mongo/schemas"
-	uuid "github.com/satori/go.uuid"
+	uuid "github.com/gofrs/uuid"
 
 	"github.com/globalsign/mgo/bson"
 
@@ -21,7 +21,7 @@ import (
 // refresh/set user token by email
 func refreshToken(email string) (c *http.Cookie, ok bool) {
 	// New Session Token
-	sessionToken := uuid.NewV4()
+	sessionToken, _ := uuid.NewV4()
 	expiry := time.Now().Add(120 * time.Minute)
 	expiryStr := expiry.Format(time.RFC3339)
 
