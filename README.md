@@ -1,5 +1,6 @@
 [![GoDoc](https://godoc.org/github.com/jackyzha0/go-auth-w-mongo?status.svg)](https://godoc.org/github.com/jackyzha0/go-auth-w-mongo)
 [![GoReportCard](https://goreportcard.com/badge/github.com/jackyzha0/go-auth-w-mongo)](https://goreportcard.com/report/github.com/jackyzha0/go-auth-w-mongo)
+[![CircleCI](https://circleci.com/gh/jackyzha0/go-auth-w-mongo.svg?style=svg)](https://circleci.com/gh/jackyzha0/go-auth-w-mongo)
 # Go Auth App
 ### Simple session based authentication with Mux and MongoDB
 
