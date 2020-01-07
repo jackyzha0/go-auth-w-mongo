@@ -9,20 +9,14 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/jackyzha0/go-auth-w-mongo/schemas"
+	"github.com/jackyzha0/go-auth-w-mongo/db"
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 
 	"github.com/gorilla/schema"
 	"golang.org/x/crypto/bcrypt"
 )
-
-// session is a connection to the given URI
-var session, _ = mgo.Dial("mongodb://localhost:27017")
-
-// Users is a new connection to Users Collection
-var Users = session.DB("exampleDB").C("Users")
 
 // refresh/set user token by email
 func refreshToken(email string) (c *http.Cookie, ok bool) {
@@ -35,7 +29,7 @@ func refreshToken(email string) (c *http.Cookie, ok bool) {
 	update := bson.M{
 		"$set": bson.M{"sessionToken": sessionToken.String(),
 			"sessionExpires": expiryStr}}
-	updateErr := Users.Update(bson.M{"email": email}, update)
+	updateErr := db.Users.Update(bson.M{"email": email}, update)
 
 	if updateErr != nil {
 		return nil, false
@@ -49,7 +43,7 @@ func refreshToken(email string) (c *http.Cookie, ok bool) {
 	}, true
 }
 
-// Login is an endpoint to users to login through, injects a sessionToken that is valid for 2 hours
+// Login is an endpoint to db.users to login through, injects a sessionToken that is valid for 2 hours
 func Login(w http.ResponseWriter, r *http.Request) {
 	creds := new(schemas.Credentials)
 
@@ -74,7 +68,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	filter := bson.M{"email": creds.Email}
 	var res schemas.User
-	findErr := Users.Find(filter).One(&res)
+	findErr := db.Users.Find(filter).One(&res)
 
 	// can't find user, email doesnt exist in db
 	if findErr != nil {
@@ -114,7 +108,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 	// Clear user token
 	update := bson.M{
 		"$set": bson.M{"sessionToken": ""}}
-	updateErr := Users.Update(bson.M{"email": e}, update)
+	updateErr := db.Users.Update(bson.M{"email": e}, update)
 
 	if updateErr != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -151,7 +145,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	newUser.Password = string(hash)
 
 	// insert document
-	insertErr := Users.Insert(newUser)
+	insertErr := db.Users.Insert(newUser)
 
 	// email already exists
 	if insertErr != nil {
@@ -164,11 +158,11 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	log.Infof("Created new user with email %v", newUser.Email)
 }
 
-// Dashboard is the endpoint to display a welcome page to auth'd users
+// Dashboard is the endpoint to display a welcome page to auth'd db.users
 func Dashboard(w http.ResponseWriter, r *http.Request) {
 	e := r.Header.Get("X-res-email")
 	var res schemas.User
-	_ = Users.Find(bson.M{"email": e}).One(&res)
+	_ = db.Users.Find(bson.M{"email": e}).One(&res)
 
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "Welcome back %s!\n", res.Name)

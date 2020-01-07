@@ -10,7 +10,7 @@ import (
 
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
-	"github.com/jackyzha0/go-auth-w-mongo/routes"
+	"github.com/jackyzha0/go-auth-w-mongo/db"
 	"github.com/jackyzha0/go-auth-w-mongo/schemas"
 )
 
@@ -36,7 +36,7 @@ func Auth(req http.HandlerFunc, adminCheck bool) http.HandlerFunc {
 
 		filter := bson.M{"sessionToken": sessionToken}
 		var res schemas.User
-		findErr := routes.Users.Find(filter).One(&res)
+		findErr := db.Users.Find(filter).One(&res)
 
 		if findErr != nil {
 

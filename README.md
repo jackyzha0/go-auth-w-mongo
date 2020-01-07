@@ -113,3 +113,7 @@ This is set in `routes/routes.go` line 22,
 // "Users" is the name of the collection
 var Users = session.DB("exampleDB").C("Users")
 ```
+
+### Other types of database connections
+
+Edit `db/db.go` and change `const DB_TYPE` to something else.
